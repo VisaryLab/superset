@@ -17,7 +17,7 @@ class ReportTemplate(Model, AuditMixinNullable):
     name = Column(String(250), nullable=False)
     description = Column(Text)
     dataset_id = Column(Integer, ForeignKey("tables.id"), nullable=False)
-    template_content = Column(Text, nullable=False)
+    template_path = Column(String(1024), nullable=False)
 
     dataset = relationship(SqlaTable, foreign_keys=[dataset_id])
 

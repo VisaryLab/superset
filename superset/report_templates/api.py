@@ -7,7 +7,9 @@ from flask import Response
 from flask_appbuilder.api import expose, protect, safe
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
-from jinja2 import Template
+import boto3
+from flask import current_app
+from relatorio.templates.opendocument import Template as ODTTemplate
 
 from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP, RouteMethod
 from superset.extensions import event_logger
@@ -68,7 +70,20 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
         try:
             df = dataset.database.get_df(sql, dataset.catalog, dataset.schema)
             context = {"data": df.to_dict(orient="records")}
-            rendered = Template(template.template_content).render(context)
+            cfg = current_app.config
+            s3 = boto3.client(
+                "s3",
+                endpoint_url=cfg.get("REPORT_TEMPLATE_S3_ENDPOINT"),
+                aws_access_key_id=cfg.get("REPORT_TEMPLATE_S3_ACCESS_KEY"),
+                aws_secret_access_key=cfg.get("REPORT_TEMPLATE_S3_SECRET_KEY"),
+            )
+            obj = s3.get_object(
+                Bucket=cfg.get("REPORT_TEMPLATE_S3_BUCKET"),
+                Key=template.template_path,
+            )
+            odt_bytes = obj["Body"].read()
+            odt_template = ODTTemplate(source=odt_bytes)
+            rendered = odt_template.render(context)
             return self.response(200, result={"content": rendered})
         except Exception as ex:  # pylint: disable=broad-except
             logger.error("Error generating report: %s", ex, exc_info=True)

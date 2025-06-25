@@ -41,7 +41,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=250), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("dataset_id", sa.Integer(), sa.ForeignKey("tables.id"), nullable=False),
-        sa.Column("template_content", sa.Text(), nullable=False),
+        sa.Column("template_path", sa.String(length=1024), nullable=False),
         sa.Column("changed_by_fk", sa.Integer(), nullable=True),
         sa.Column("created_by_fk", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
