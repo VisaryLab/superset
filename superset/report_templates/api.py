@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from flask import Response
+from flask_appbuilder.api import expose, protect, safe
+from flask_appbuilder.models.sqla.interface import SQLAInterface
+from flask_babel import lazy_gettext as _
+from jinja2 import Template
+
+from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP, RouteMethod
+from superset.extensions import event_logger
+from superset.utils import core as utils
+from superset.views.base_api import BaseSupersetModelRestApi, statsd_metrics
+
+from .models import ReportTemplate
+
+logger = logging.getLogger(__name__)
+
+
+class ReportTemplateRestApi(BaseSupersetModelRestApi):
+    datamodel = SQLAInterface(ReportTemplate)
+
+    include_route_methods = {RouteMethod.GET_LIST, "generate"}
+    class_permission_name = "ReportTemplate"
+    method_permission_name = MODEL_API_RW_METHOD_PERMISSION_MAP
+
+    resource_name = "report_template"
+    allow_browser_login = True
+
+    list_columns = ["id", "name", "description", "dataset_id"]
+
+    openapi_spec_tag = "Report Templates"
+
+    @expose("/", methods=("GET",))
+    @protect()
+    @safe
+    @statsd_metrics
+    def get_list(self) -> Response:
+        templates = self.datamodel.session.query(ReportTemplate).all()
+        result = [
+            {
+                "id": t.id,
+                "name": t.name,
+                "description": t.description,
+                "dataset_id": t.dataset_id,
+            }
+            for t in templates
+        ]
+        return self.response(200, result=result)
+
+    @expose("/<int:pk>/generate", methods=("POST",))
+    @protect()
+    @safe
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.generate",
+        log_to_statsd=False,
+    )
+    def generate(self, pk: int) -> Response:
+        """Generate a report from the given template."""
+        template = self.datamodel.session.get(ReportTemplate, pk)
+        if not template:
+            return self.response_404()
+        dataset = template.dataset
+        sql = dataset.select_star or f"SELECT * FROM {dataset.table_name}"
+        try:
+            df = dataset.database.get_df(sql, dataset.catalog, dataset.schema)
+            context = {"data": df.to_dict(orient="records")}
+            rendered = Template(template.template_content).render(context)
+            return self.response(200, result={"content": rendered})
+        except Exception as ex:  # pylint: disable=broad-except
+            logger.error("Error generating report: %s", ex, exc_info=True)
+            return self.response(500, message=str(ex))
