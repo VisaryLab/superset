@@ -35,6 +35,7 @@ down_revision = "363a9b1e8992"
 def upgrade() -> None:
     create_table(
         "report_templates",
+        sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("created_on", sa.DateTime(), nullable=True),
         sa.Column("changed_on", sa.DateTime(), nullable=True),
         sa.Column("name", sa.String(length=250), nullable=False),
