@@ -83,7 +83,7 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
             )
             odt_bytes = obj["Body"].read()
             odt_template = ODTTemplate(source=odt_bytes)
-            rendered = odt_template.render(context)
+            rendered = odt_template.generate(o=context).render()
             return self.response(200, result={"content": rendered})
         except Exception as ex:  # pylint: disable=broad-except
             logger.error("Error generating report: %s", ex, exc_info=True)
