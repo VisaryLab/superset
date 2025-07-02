@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from io import BytesIO
 
-from flask import Response
+from flask import Response, send_file
 from flask_appbuilder.api import expose, protect, safe
 from flask_appbuilder.models.sqla.interface import SQLAInterface
 from flask_babel import lazy_gettext as _
@@ -66,7 +67,10 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
         if not template:
             return self.response_404()
         dataset = template.dataset
-        sql = dataset.select_star or f"SELECT * FROM {dataset.table_name}"
+        if dataset.is_virtual and dataset.sql:
+            sql = dataset.sql
+        else:
+            sql = dataset.select_star or f"SELECT * FROM {dataset.table_name}"
         try:
             df = dataset.database.get_df(sql, dataset.catalog, dataset.schema)
             context = {"data": df.to_dict(orient="records")}
@@ -83,8 +87,15 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
             )
             odt_bytes = obj["Body"].read()
             odt_template = ODTTemplate(source=odt_bytes)
-            rendered = odt_template.generate(o=context).render()
-            return self.response(200, result={"content": rendered})
+            rendered = odt_template.generate(data=context).render()
+            buffer = BytesIO(rendered.getvalue())
+            buffer.seek(0)
+            return send_file(
+                buffer,
+                mimetype="application/vnd.oasis.opendocument.text",
+                as_attachment=True,
+                download_name=f"{template.name}.odt",
+            )
         except Exception as ex:  # pylint: disable=broad-except
             logger.error("Error generating report: %s", ex, exc_info=True)
             return self.response(500, message=str(ex))
