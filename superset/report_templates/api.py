@@ -2,25 +2,26 @@ from __future__ import annotations
 
 import logging
 import os
+from io import BytesIO
 from typing import Any
 
-from flask import Response, send_file, request
+import boto3
+from flask import current_app, request, Response, send_file
 from flask_appbuilder.api import expose, protect, safe
 from flask_appbuilder.models.sqla.interface import SQLAInterface
-from flask_babel import lazy_gettext as _
-import boto3
-from flask import current_app
+from jinja2 import meta
 from relatorio.templates.opendocument import Template as ODTTemplate
-from io import BytesIO
+from sqlalchemy.types import String
+from werkzeug.utils import secure_filename
 
+from superset.commands.database.validate_sql import ValidateSQLCommand
 from superset.constants import MODEL_API_RW_METHOD_PERMISSION_MAP, RouteMethod
 from superset.extensions import event_logger
 from superset.utils import core as utils
-from werkzeug.utils import secure_filename
 from superset.views.base_api import (
     BaseSupersetModelRestApi,
-    statsd_metrics,
     requires_form_data,
+    statsd_metrics,
 )
 
 from .models import ReportTemplate
@@ -126,6 +127,18 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
             logger.error("Unable to read template from S3 or local")
             raise
 
+    def _sanitize_params(self, params: dict[str, Any], dialect) -> dict[str, Any]:
+        """Escape user-supplied parameters to avoid SQL injection."""
+        sanitized: dict[str, Any] = {}
+        for k, v in params.items():
+            if isinstance(v, str):
+                sanitized[k] = String().literal_processor(dialect=dialect)(value=v)[
+                    1:-1
+                ]
+            else:
+                sanitized[k] = v
+        return sanitized
+
     def _delete(self, key: str) -> None:
         cfg = current_app.config
         bucket, local_path = self._storage_paths(cfg, key)
@@ -143,7 +156,6 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
             os.remove(local_path)
         except FileNotFoundError:
             pass
-
 
     @expose("/", methods=("POST",))
     @protect()
@@ -231,17 +243,48 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
         action=lambda self, *args, **kwargs: f"{self.__class__.__name__}.generate",
         log_to_statsd=False,
     )
-    def generate(self, pk: int) -> Response:
-        """Generate a report from the given template."""
+    def generate(self, pk: int, params: dict[str, Any] | None = None) -> Response:
+        """Generate a report from the given template using Jinja parameters.
+
+        Parameters are expected as a JSON body mapping Jinja placeholders to
+        values.
+        """
         template = self.datamodel.session.get(ReportTemplate, pk)
         if not template:
             return self.response_404()
         dataset = template.dataset
+
+        # extra parameters for SQL templates are expected in request JSON
+        if params is None:
+            params = request.get_json(silent=True) or {}
+        if not isinstance(params, dict):
+            return self.response_400(message="Invalid json payload")
+        params = self._sanitize_params(params, dataset.database.get_dialect())
+
         if dataset.is_virtual and dataset.sql:
             sql = dataset.sql
         else:
-            sql = dataset.select_star or f"SELECT * FROM {dataset.table_name}"
+            sql = dataset.select_star or f"SELECT * FROM {dataset.table_name}"  # noqa: S608
         try:
+            tp = dataset.get_template_processor()
+            sql = tp.process_template(
+                sql,
+                **dataset.template_params_dict,
+                **params,
+            )
+            if meta.find_undeclared_variables(tp.env.parse(sql)):
+                return self.response(400, message="Unfilled templates detected")
+
+            try:
+                validator_errors = ValidateSQLCommand(
+                    dataset.database.id,
+                    {"sql": sql, "catalog": dataset.catalog, "schema": dataset.schema},
+                ).run()
+                if validator_errors:
+                    return self.response(400, message="Invalid SQL")
+            except Exception:  # pylint: disable=broad-except
+                logger.warning("SQL validation skipped")
+
             df = dataset.database.get_df(sql, dataset.catalog, dataset.schema)
             context = {"data": df.to_dict(orient="records")}
             odt_bytes = self._read(template.template_path)
