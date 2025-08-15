@@ -35,7 +35,16 @@ class SupersetAuthView(BaseSupersetView, AuthView):
         if g.user is not None and g.user.is_authenticated:
             return redirect(self.appbuilder.get_url_for_index)
 
-        return super().render_app_template()
+        #return super().render_app_template()
+
+        remote_user = request.environ.get("REMOTE_USER")
+        if not remote_user:
+            return abort(401)
+        user = self.appbuilder.sm.auth_user_remote_user(remote_user)
+        if not user:
+            return abort(401)
+        login_user(user)
+        return redirect(self.appbuilder.get_url_for_index)
 
 
 class SupersetRegisterUserView(BaseSupersetView):
@@ -49,7 +58,6 @@ class SupersetRegisterUserView(BaseSupersetView):
 
 class AuthRemoteUserView(SupersetAuthView):
     """Authenticate users based on ``REMOTE_USER``."""
-
     @expose("/")
     @no_cache
     def login(self, provider: Optional[str] = None) -> WerkzeugResponse:  # type: ignore[override]
@@ -62,7 +70,7 @@ class AuthRemoteUserView(SupersetAuthView):
         if not remote_user:
             return abort(401)
 
-        user = self.appbuilder.sm.auth_user_remote_user(remote_user)  #_user в конца дописано
+        user = self.appbuilder.sm.auth_user_remote_user(remote_user)
         if not user:
             return abort(401)
 
