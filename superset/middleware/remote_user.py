@@ -51,5 +51,5 @@ class RemoteUserMiddleware:
             logger.info(f"REMOTE_USER={remote_user}")
         else:
             logger.info(f"REMOTE_USER not writted in enviromment")
-        environ["REMOTE_USER"] = "super3"
+        #environ["REMOTE_USER"] = "super3"
         return self.app(environ, start_response)
