@@ -180,7 +180,8 @@ SUPERSET_DASHBOARD_PERIODICAL_REFRESH_LIMIT = 0
 SUPERSET_DASHBOARD_PERIODICAL_REFRESH_WARNING_MESSAGE = None
 
 SUPERSET_DASHBOARD_POSITION_DATA_LIMIT = 65535
-CUSTOM_SECURITY_MANAGER = None
+from superset.security.remote_user import CustomSecurityManager
+CUSTOM_SECURITY_MANAGER = CustomSecurityManager
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 # ---------------------------------------------------------
 
@@ -349,8 +350,8 @@ AUTH_REMOTE_USER_HEADER = "X-Forwarded-User"
 # AUTH_ROLE_PUBLIC = 'Public'
 
 # Will allow user self registration
-# AUTH_USER_REGISTRATION = True
-
+#AUTH_USER_REGISTRATION = True
+#RECAPTCHA_PUBLIC_KEY = 'public'
 # The default user self registration role
 # AUTH_USER_REGISTRATION_ROLE = "Public"
 

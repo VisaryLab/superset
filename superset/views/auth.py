@@ -62,7 +62,7 @@ class AuthRemoteUserView(SupersetAuthView):
         if not remote_user:
             return abort(401)
 
-        user = self.appbuilder.sm.auth_user_remote(remote_user)
+        user = self.appbuilder.sm.auth_user_remote_user(remote_user)  #_user в конца дописано
         if not user:
             return abort(401)
 
