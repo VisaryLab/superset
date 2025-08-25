@@ -46,8 +46,10 @@ class SupersetAuthView(BaseSupersetView, AuthView):
                 return abort(401)
             login_user(user)
             return redirect(self.appbuilder.get_url_for_index)
-        else:
+        elif auth_type ==AUTH_DB:
             return super().render_app_template()
+        else:
+            return abort(401)
 
 
 
