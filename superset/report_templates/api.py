@@ -275,8 +275,8 @@ class ReportTemplateRestApi(BaseSupersetModelRestApi):
         if dataset.is_virtual and dataset.sql:
             sql = dataset.sql
             if params:
-                template = Template(sql)
-                sql = template.render(params)
+                template_sql = Template(sql)
+                sql = template_sql.render(params)
                 tp = dataset.get_template_processor()
                 if meta.find_undeclared_variables(tp.env.parse(sql)):
                     return self.response(400, message="Unfilled templates detected")
