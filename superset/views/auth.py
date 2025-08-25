@@ -17,13 +17,15 @@
 
 from typing import Optional
 
-from flask import g, redirect
+from flask import g, redirect, request, abort
 from flask_appbuilder import expose
 from flask_appbuilder.security.decorators import no_cache
 from flask_appbuilder.security.views import AuthView, WerkzeugResponse
+from flask_login import login_user
 
 from superset.views.base import BaseSupersetView
-
+from superset import current_app
+from flask_appbuilder.security.manager import AUTH_DB, AUTH_REMOTE_USER
 
 class SupersetAuthView(BaseSupersetView, AuthView):
     route_base = "/login"
@@ -31,10 +33,37 @@ class SupersetAuthView(BaseSupersetView, AuthView):
     @expose("/")
     @no_cache
     def login(self, provider: Optional[str] = None) -> WerkzeugResponse:
+        auth_type = current_app.config["AUTH_TYPE"]
         if g.user is not None and g.user.is_authenticated:
             return redirect(self.appbuilder.get_url_for_index)
 
-        return super().render_app_template()
+        if auth_type == AUTH_REMOTE_USER:
+            remote_user = request.environ.get("REMOTE_USER")
+            if not remote_user:
+                return abort(401)
+            user = self.appbuilder.sm.auth_user_remote_user(remote_user)
+            if not user:
+                return abort(401)
+            login_user(user)
+            return redirect(self.appbuilder.get_url_for_index)
+        elif auth_type ==AUTH_DB:
+            return super().render_app_template()
+        else:
+            return abort(401)
+
+
+
+        #return super().render_app_template()
+
+        #remote_user = request.environ.get("REMOTE_USER")
+        #if not remote_user:
+        #    return super().render_app_template()
+        #    return abort(401)
+        #user = self.appbuilder.sm.auth_user_remote_user(remote_user)
+        #if not user:
+        #    return abort(401)
+        #login_user(user)
+        #return redirect(self.appbuilder.get_url_for_index)
 
 
 class SupersetRegisterUserView(BaseSupersetView):
@@ -44,3 +73,25 @@ class SupersetRegisterUserView(BaseSupersetView):
     @no_cache
     def register(self) -> WerkzeugResponse:
         return super().render_app_template()
+
+
+class AuthRemoteUserView(SupersetAuthView):
+    """Authenticate users based on ``REMOTE_USER``."""
+    @expose("/")
+    @no_cache
+    def login(self, provider: Optional[str] = None) -> WerkzeugResponse:  # type: ignore[override]
+        """Authenticate the user from ``REMOTE_USER`` and redirect."""
+
+        if g.user is not None and g.user.is_authenticated:
+            return redirect(self.appbuilder.get_url_for_index)
+
+        remote_user = request.environ.get("REMOTE_USER")
+        if not remote_user:
+            return abort(401)
+
+        user = self.appbuilder.sm.auth_user_remote_user(remote_user)
+        if not user:
+            return abort(401)
+
+        login_user(user)
+        return redirect(self.appbuilder.get_url_for_index)

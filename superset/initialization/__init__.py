@@ -191,7 +191,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         from superset.views.user_info import UserInfoView
         from superset.views.users.api import CurrentUserRestApi, UserRestApi
         from superset.views.users_list import UsersListView
-
+        from superset.views.report_template import ReportTemplateModelView
         set_app_error_handlers(self.superset_app)
 
         #
@@ -333,15 +333,23 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
             category_icon="",
         )
 
-        appbuilder.add_link(
+        appbuilder.add_view(
+            ReportTemplateModelView,
             "Report Templates",
-            label=__("Report Templates"),
-            href=f"{app_root}/report_template/list/",
             icon="fa-file-text",
             category="Manage",
-            category_label=__("Manage"),
-            category_icon="",
+            category_label="Manage",
         )
+
+        #appbuilder.add_link(
+        #    "Report Templates",
+        #    label=__("Report Templates"),
+        #    href=f"{app_root}/report_template/list/",
+        #    icon="fa-file-text",
+        #    category="Manage",
+        #    category_label=__("Manage"),
+        #    category_icon="",
+        #)
 
         #
         # Setup views with no menu

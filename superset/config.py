@@ -64,7 +64,7 @@ from superset.utils.log import DBEventLogger
 from superset.utils.logging_configurator import DefaultLoggingConfigurator
 
 logger = logging.getLogger(__name__)
-
+WTF_CSRF_ENABLED = False
 if TYPE_CHECKING:
     from flask_appbuilder.security.sqla import models
     from sqlglot import Dialect, Dialects  # pylint: disable=disallowed-sql-import
@@ -180,7 +180,22 @@ SUPERSET_DASHBOARD_PERIODICAL_REFRESH_LIMIT = 0
 SUPERSET_DASHBOARD_PERIODICAL_REFRESH_WARNING_MESSAGE = None
 
 SUPERSET_DASHBOARD_POSITION_DATA_LIMIT = 65535
-CUSTOM_SECURITY_MANAGER = None
+#from superset.security.remote_user import CustomSecurityManager
+#CUSTOM_SECURITY_MANAGER = CustomSecurityManager
+
+from flask import Blueprint, request
+from flask_appbuilder.security.views import AuthRemoteUserView
+from superset.security import SupersetSecurityManager
+class RemoteUserAuthView(AuthRemoteUserView):
+    """Read the authenticated username from ``REMOTE_USER``."""
+
+    def get_user(self) -> str | None:  # type: ignore[override]
+        return request.environ.get("REMOTE_USER")
+
+
+class RemoteUserSecurityManager(SupersetSecurityManager):
+    authremoteuserview = RemoteUserAuthView
+CUSTOM_SECURITY_MANAGER = RemoteUserSecurityManager  ##############
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 # ---------------------------------------------------------
 
@@ -188,7 +203,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 # or use `SUPERSET_SECRET_KEY` environment variable.
 # Use a strong complex alphanumeric string and use a tool to help you generate
 # a sufficiently random sequence, ex: openssl rand -base64 42"
-SECRET_KEY = os.environ.get("SUPERSET_SECRET_KEY") or CHANGE_ME_SECRET_KEY
+SECRET_KEY = os.environ.get("SUPERSET_SECRET_KEY") or '123456'#CHANGE_ME_SECRET_KEY
 
 # The SQLAlchemy connection string.
 SQLALCHEMY_DATABASE_URI = (
@@ -259,7 +274,7 @@ SQLGLOT_DIALECTS_EXTENSIONS: DialectExtensions | Callable[[], DialectExtensions]
 QUERY_SEARCH_LIMIT = 1000
 
 # Flask-WTF flag for CSRF
-WTF_CSRF_ENABLED = True
+WTF_CSRF_ENABLED = False#11True
 
 # Add endpoints that need to be exempt from CSRF protection
 WTF_CSRF_EXEMPT_LIST = [
@@ -337,7 +352,7 @@ FAB_API_SWAGGER_UI = True
 # AUTH_DB : Is for database (username/password)
 # AUTH_LDAP : Is for LDAP
 # AUTH_REMOTE_USER : Is for using REMOTE_USER from web server
-AUTH_TYPE = AUTH_REMOTE_USER
+AUTH_TYPE = AUTH_DB #AUTH_REMOTE_USER
 
 # The header to use for remote user authentication
 AUTH_REMOTE_USER_HEADER = "X-Forwarded-User"
@@ -349,10 +364,10 @@ AUTH_REMOTE_USER_HEADER = "X-Forwarded-User"
 # AUTH_ROLE_PUBLIC = 'Public'
 
 # Will allow user self registration
-# AUTH_USER_REGISTRATION = True
-
+AUTH_USER_REGISTRATION = True
+RECAPTCHA_PUBLIC_KEY = 'Public'
 # The default user self registration role
-# AUTH_USER_REGISTRATION_ROLE = "Public"
+AUTH_USER_REGISTRATION_ROLE = 'Public'
 
 # When using LDAP Auth, setup the LDAP server
 # AUTH_LDAP_SERVER = "ldap://ldapserver.new"
@@ -599,7 +614,7 @@ DEFAULT_FEATURE_FLAGS: dict[str, bool] = {
 
 # ----------------------------------------------------------------------
 SSH_TUNNEL_MANAGER_CLASS = "superset.extensions.ssh.SSHManager"
-SSH_TUNNEL_LOCAL_BIND_ADDRESS = "127.0.0.1"
+SSH_TUNNEL_LOCAL_BIND_ADDRESS = "0.0.0.0"
 #: Timeout (seconds) for tunnel connection (open_channel timeout)
 SSH_TUNNEL_TIMEOUT_SEC = 10.0
 #: Timeout (seconds) for transport socket (``socket.settimeout``)
@@ -1801,7 +1816,7 @@ GLOBAL_ASYNC_QUERIES_TRANSPORT: Literal["polling", "ws"] = "polling"
 GLOBAL_ASYNC_QUERIES_POLLING_DELAY = int(
     timedelta(milliseconds=500).total_seconds() * 1000
 )
-GLOBAL_ASYNC_QUERIES_WEBSOCKET_URL = "ws://127.0.0.1:8080/"
+GLOBAL_ASYNC_QUERIES_WEBSOCKET_URL = "ws://0.0.0.0:8080/"
 
 # Global async queries cache backend configuration options:
 # - Set 'CACHE_TYPE' to 'RedisCache' for RedisCacheBackend.
