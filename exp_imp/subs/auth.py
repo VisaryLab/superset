@@ -2,7 +2,7 @@ from subs.css_template import *
 import requests
 import json
 
-def get_tokens():
+def get_tokens(superset_domain, connect_params):
     url =  f"{superset_domain}/api/v1/security/login"
     req = requests.post(url=url, json=connect_params, verify=False)
     j = req.json()

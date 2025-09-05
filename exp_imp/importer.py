@@ -32,7 +32,7 @@ def get_clients_charts(access_token, superset_domain):
     new_charts = [json.loads(sl) for sl in charts]
     return new_charts
 
-access_token, refresh_token = get_tokens()
+access_token, refresh_token = get_tokens(superset_domain, connect_params)
 # прочитаем сущности superset у заказчика
 
 new_databases =  get_clients_databases(access_token, superset_domain)

@@ -8,8 +8,10 @@ from subs.charts import *
 import json
 from subs.config import *
 
+
+
 output_directory = './output'
-access_token, refresh_token = get_tokens()
+access_token, refresh_token = get_tokens(ba_superset_domain, ba_connect_params)
 for a in  get_databases(access_token, output_directory, ba_superset_domain):
     b = json.loads(a)
     id = b['id']
