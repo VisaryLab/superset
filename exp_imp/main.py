@@ -6,6 +6,7 @@ from subs.reports import *
 from subs.database import *
 from subs.charts import *
 import json
+from subs.config import *
 
 output_directory = './output'
 access_token, refresh_token = get_tokens()

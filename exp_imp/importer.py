@@ -5,6 +5,7 @@ from subs.reports import *
 from subs.database import *
 from subs.charts import *
 from subs.corrector import *
+from subs.config import *
 
 def get_clients_datasets(access_token, superset_domain):
     datasets = get_datasets(access_token, None, superset_domain)
