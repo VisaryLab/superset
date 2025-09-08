@@ -2,7 +2,9 @@ import requests
 import os
 import json
 from logging import getLogger
+from log_config import logger_config
 local_logger = getLogger(__name__)
+logger_config(local_logger)
 
 
 def get_css_templates(access_token, output_dir, superset_domain):

@@ -1,9 +1,10 @@
 import requests
 import os
 import json
-from subs.config import *
 from logging import getLogger
+from log_config import logger_config
 local_logger = getLogger(__name__)
+logger_config(local_logger)
 
 def get_report_templates(access_token, output_dir, superset_domain):
     limit=20
@@ -37,7 +38,7 @@ def export_report_template(access_token, report_template_id, report_template_nam
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(url, headers=headers, stream=True)
     if response.status_code == 200:
-        os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
         file_name = report_template_name.replace("/", "_")
         extension = response.headers['Content-Disposition'].lower()
         filename = extension.split('filename=')[1]

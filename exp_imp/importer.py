@@ -8,11 +8,10 @@ from subs.corrector import *
 from subs.config import *
 
 from logging import getLogger
-from log_config import logger_config
+from subs.log_config import logger_config
 local_logger = getLogger("importer")
 logger_config(local_logger)
-database_logger = getLogger("subs.database")
-logger_config(database_logger)
+
 
 
 

@@ -1,9 +1,10 @@
 import requests
 import os
 import json
-from subs.config import *
 from logging import getLogger
+from log_config import logger_config
 local_logger = getLogger(__name__)
+logger_config(local_logger)
 
 def get_dashboards(access_token, output_dir, superset_domain):
     page=0
@@ -37,7 +38,7 @@ def export_dashbord(access_token, dashboard_id, dashboard_name, output_dir, supe
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(url, headers=headers, stream=True)
     if response.status_code == 200:
-        os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
         file_name = dashboard_name.replace("/", "_")
         zip_file_path = os.path.join(output_dir, f'dashboard_{file_name}.zip')
         with open(zip_file_path, 'wb') as f:
@@ -53,7 +54,7 @@ def export_dashbord_json(access_token, dashboard_id, dashboard_name, output_dir,
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.get(url, headers=headers, stream=True)
     if response.status_code == 200:
-        os.makedirs(output_directory, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
         file_name = dashboard_name.replace("/", "_")
         zip_file_path = os.path.join(output_dir, f'dashboard_{file_name}.json')
         with open(zip_file_path, 'wb') as f:
