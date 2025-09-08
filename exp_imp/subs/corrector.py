@@ -106,10 +106,10 @@ def zip_corrector(sqlalchemy_uri, database_uuid, database_name, output_dir, zip_
     with tempfile.TemporaryDirectory() as temp_dir:
         zf.extractall(temp_dir)
         for dirpath, dirnames, filenames in os.walk(temp_dir):
-            print(f'Directory: {dirpath}')
-            print(f'Subdirectories: {dirnames}')
-            print(f'Files: {filenames}')
-            print('--------------------------------')
+           # print(f'Directory: {dirpath}')
+           # print(f'Subdirectories: {dirnames}')
+           # print(f'Files: {filenames}')
+           # print('--------------------------------')
             if dirnames and sub_main=='':
                 sub_main = dirnames[0]
             if 'databases' in dirpath:

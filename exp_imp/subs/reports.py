@@ -2,6 +2,8 @@ import requests
 import os
 import json
 from subs.config import *
+from logging import getLogger
+local_logger = getLogger(__name__)
 
 def get_report_templates(access_token, output_dir, superset_domain):
     limit=20
@@ -22,9 +24,10 @@ def get_report_templates(access_token, output_dir, superset_domain):
         reports_ids.extend(new_dash)
         if downloaded>=count:
             break
-    print('нашли репортс')
-    [print(i[0],' ',i[1]) for i in  reports_ids]
+    local_logger.info('нашли отчеты')
+    [local_logger.info(str(i)) for i in reports_ids]
     if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, 'reports_json.txt'), 'w', encoding='utf-8') as rt:
             rt.writelines(data_json)
     return data_json
@@ -45,7 +48,7 @@ def export_report_template(access_token, report_template_id, report_template_nam
                 f.write(chunk)
         return zip_file_path
     else:
-        raise Exception(f"ошибка экспорта дашборда: {response.text}")
+        local_logger.error(f"ошибка экспорта дашборда: {response.text}")
 
 
 def import_report_template(access_token, dataset_id, output_dir, desc, superset_domain):  # имя датасет описание сам файл
@@ -65,7 +68,7 @@ def import_report_template(access_token, dataset_id, output_dir, desc, superset_
         print('загрузили ')
     else:
         f = response.text
-        print(f"ошибка экспорта репорта: {f}")
+        local_logger.error(f"ошибка экспорта репорта: {f}")
 
 def del_report(access_token, report_id, superset_domain):
     url = f"{superset_domain}/api/v1/report_template/{report_id}"
@@ -74,4 +77,4 @@ def del_report(access_token, report_id, superset_domain):
     if response.status_code == 200:
         return True
     else:
-        print(f"ошибка убивания репорта: {response.text}")
+        local_logger.error(f"ошибка убивания репорта: {response.text}")

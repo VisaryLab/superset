@@ -2,6 +2,8 @@ import requests
 import os
 import json
 from subs.config import *
+from logging import getLogger
+local_logger = getLogger(__name__)
 
 def get_dashboards(access_token, output_dir, superset_domain):
     page=0
@@ -22,9 +24,10 @@ def get_dashboards(access_token, output_dir, superset_domain):
         dashboard_ids.extend(new_dash)
         if downloaded>=count:
             break
-    print('нашли датаборды')
-    [print(i[0],' ',i[1]) for i in  dashboard_ids]
+    local_logger.info('нашли дашборды')
+    [local_logger.info(str(i)) for i in dashboard_ids]
     if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, 'dashboard_json.txt'), 'w', encoding='utf-8') as rt:
             rt.writelines(data_json)
     return data_json
@@ -42,7 +45,7 @@ def export_dashbord(access_token, dashboard_id, dashboard_name, output_dir, supe
                 f.write(chunk)
         return zip_file_path
     else:
-        raise Exception(f"ошибка экспорта дашборда: {response.text}")
+        local_logger.error(f"ошибка экспорта дашборда: {response.text}")
 
 
 def export_dashbord_json(access_token, dashboard_id, dashboard_name, output_dir, superset_domain):
@@ -58,7 +61,7 @@ def export_dashbord_json(access_token, dashboard_id, dashboard_name, output_dir,
                 f.write(chunk)
         return zip_file_path
     else:
-        print(f"ошибка экспорта дашборда: {response.text}")
+        local_logger.error(f"ошибка экспорта дашборда: {response.text}")
 
 
 
@@ -79,14 +82,15 @@ def import_dashboard(access_token, output_dir, superset_domain):
         print('загрузили ')
     else:
         f = response.text
-        print(f"ошибка импорта датасета: {f}")
+        local_logger.error(f"ошибка импорта дашборда: {f}")
 
 
 def del_dashboard(access_token, dashboard_id, superset_domain):
+    local_logger.info(f"удаляем датасет {dashboard_id}")
     url = f"{superset_domain}/api/v1/dashboard/{dashboard_id}"
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.delete(url, headers=headers, stream=True)
     if response.status_code == 200:
         return True
     else:
-        print(f"ошибка убивания дашборда: {response.text}")
+        local_logger.error(f"ошибка убивания дашборда: {response.text}")

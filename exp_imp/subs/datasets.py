@@ -1,6 +1,8 @@
 import requests
 import os
 import json
+from logging import getLogger
+local_logger = getLogger(__name__)
 
 def get_datasets(access_token, output_dir, superset_domain):
     page=0
@@ -22,10 +24,11 @@ def get_datasets(access_token, output_dir, superset_domain):
         if downloaded>=count:
             break
     if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, 'datasets_json.txt'), 'w', encoding='utf-8') as rt:
             rt.writelines(data_json)
-    print('нашли датасеты')
-    [print(i[0],' ',i[1]) for i in  datasets_ids]
+    local_logger.info('нашли датасеты')
+    [local_logger.info(str(i)) for i in datasets_ids]
     return data_json
 
 def export_dataset(access_token, datasets_id, dataset_name, output_dir, superset_domain):
@@ -41,7 +44,7 @@ def export_dataset(access_token, datasets_id, dataset_name, output_dir, superset
                 f.write(chunk)
         return zip_file_path
     else:
-        raise Exception(f"ошибка экспорта датасета: {response.text}")
+        local_logger.error(f"ошибка экспорта датасета: {response.text}")
 
 
 def import_dataset(access_token, output_dir, superset_domain):
@@ -63,13 +66,14 @@ def import_dataset(access_token, output_dir, superset_domain):
         print('загрузили ')
     else:
         f = response.text
-        raise Exception(f"ошибка экспорта датасета: {f}")
+        local_logger.error(f"ошибка экспорта датасета: {f}")
 
 def del_dataset(access_token, datasets_id, superset_domain):
+    local_logger.info(f"удаляем датасет {datasets_id}")
     url = f"{superset_domain}/api/v1/dataset/{datasets_id}"
     headers = {'Authorization': f'Bearer {access_token}'}
     response = requests.delete(url, headers=headers, stream=True)
     if response.status_code == 200:
         return True
     else:
-        print(f"ошибка убивания датасета: {response.text}")
+        local_logger.error(f"ошибка убивания датасета {datasets_id}: {response.text}")
